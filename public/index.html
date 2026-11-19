@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PIXEL CIPHER LAB</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="load-curtain" role="status">
+    <div class="load-head">PIXEL CIPHER LAB / 001</div>
+    <span class="load-num">000</span>
+    <div><div class="load-step">STARTING ENGINE</div><div class="load-rule"></div></div>
+  </div>
+  <div class="shell">
+    <header class="mast">
+      <div class="identity">
+        <svg width="34" height="34" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M0 0h15v15H0zM17 0h7v7h-7zM25 8h7v7h-7zM0 17h7v7H0zM8 25h7v7H8zM17 17h15v15H17z"/></svg>
+        <div><b>PIXEL CIPHER LAB</b><small>ECB / CBC VISUAL LAB</small></div>
+      </div>
+      <div class="mast-readouts"><span id="apiLatency">API — MS</span><span id="apiPill">API / <span id="apiStatus">STANDBY</span></span></div>
+    </header>
+    <main>
+      <section class="hero" aria-labelledby="headline">
+        <div class="hero-copy" data-enter><p class="eyebrow"><i></i>AES-128 · SERVER-SIDE · LIVE</p>
+          <h1 id="headline">Upload a picture.<br>Watch one mode <em>fail to hide it.</em></h1>
+          <p class="subhead">AES-128, two modes, one image. Encryption happens on the server; the failure happens in front of you.</p>
+        </div>
+        <div id="dropzone" data-enter>
+          <div class="zone-id" aria-hidden="true">FIG. 01 <span>/</span> INPUT PLATE</div>
+          <svg class="plate-icon" viewBox="0 0 48 48" width="48" height="48" fill="none" stroke="currentColor" aria-hidden="true"><path d="M2 13V2h11m22 0h11v11M2 35v11h11m22 0h11V35"/><path d="M9 10h30v27H9zM9 32l10-11 7 7 5-5 8 9"/><circle cx="30" cy="18" r="2.5"/></svg>
+          <strong>Drop an image here</strong><input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" class="visually-hidden"><label for="fileInput">or choose a file</label>
+          <small>PNG, JPG or WEBP — up to 12 MB</small>
+        </div>
+      </section>
+      <div class="workspace">
+        <aside class="rail" aria-label="Experiment controls">
+          <section data-enter><h2>01 / IMAGE</h2><button id="chooseBtn" type="button">CHOOSE IMAGE</button>
+            <div class="field-label">Sample plates</div><div id="sampleRow"><button type="button" data-sample="penguin">Penguin</button><button type="button" data-sample="text">Text</button><button type="button" data-sample="gradient">Gradient</button></div>
+          </section>
+          <section data-enter><h2>02 / KEY &amp; IV</h2>
+            <div class="field-head"><label for="keyInput">Key / hex</label><button id="randomKeyBtn" type="button" aria-label="Randomise key">Randomise</button></div>
+            <input id="keyInput" class="hex" type="text" placeholder="32 hex characters" spellcheck="false" autocomplete="off">
+            <div class="field-head"><label for="ivInput">IV / hex</label><button id="randomIvBtn" type="button" aria-label="Randomise IV">Randomise</button></div>
+            <input id="ivInput" class="hex" type="text" placeholder="32 hex characters" spellcheck="false" autocomplete="off">
+          </section>
+          <section data-enter><h2>03 / OUTPUT</h2><div class="actions"><button id="newIvBtn" type="button">NEW IV</button><button id="gridToggle" type="button" aria-pressed="false">SHOW BLOCKS</button></div></section>
+        </aside>
+        <div class="stage">
+          <div class="stage-head" data-enter><h2>Comparison plate</h2><button id="presentBtn" type="button">PRESENT</button></div>
+          <div id="pipeline" data-enter aria-label="Processing pipeline"><span class="pipe-node" data-step="image">Image</span><span class="pipe-node" data-step="api">API</span><span class="pipe-node" data-step="aes">AES</span><span class="pipe-node" data-step="analysis">Analysis</span><span class="pipe-node" data-step="result">Result</span><span id="pipeDot" aria-hidden="true"></span></div>
+          <section id="compare" class="instrument-bay" data-enter aria-label="Image comparison">
+            <div class="ruler" aria-hidden="true"><span>00</span><span>08</span><span>16</span><span>24</span></div>
+            <div class="panels">
+              <article id="panelOriginal" class="panel"><h3>NO. 01 / PLAINTEXT</h3><div class="tag">INPUT</div><div class="canvas-wrap"><canvas id="canvasOriginal" class="image" width="256" height="256" aria-label="Plaintext image"></canvas><div class="scan"></div></div><div class="panel-foot"><span>4096 BLOCKS</span><span>REFERENCE</span></div></article>
+              <article id="panelECB" class="panel"><h3>NO. 02 / ECB</h3><div class="tag">DETERMINISTIC</div><div class="canvas-wrap"><canvas id="canvasECB" class="image" width="256" height="256" aria-label="ECB encrypted image"></canvas><div class="scan"></div><span id="unchangedBadge" class="hidden">UNCHANGED</span></div><div class="panel-foot"><span>4096 BLOCKS</span><span>LEAKS STRUCTURE</span></div></article>
+              <article id="panelCBC" class="panel"><h3>NO. 03 / CBC</h3><div class="tag">RANDOMISED</div><div class="canvas-wrap"><canvas id="canvasCBC" class="image" width="256" height="256" aria-label="CBC encrypted image"></canvas><div class="scan"></div></div><div class="panel-foot"><span>4096 BLOCKS</span><span>CHAINED</span></div></article>
+            </div>
+          </section>
+          <p id="presentCaption">Same key. Same image. Only the mode changed.</p>
+          <div class="analytics">
+            <p id="insightText" data-enter aria-live="polite">Upload an image to begin.</p>
+            <div class="measurements">
+              <section data-enter><h2>BLOCK ANALYSIS</h2><div class="gauges">
+                <div class="gauge"><svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="34"/><circle id="leakEcbRing" cx="40" cy="40" r="34"/></svg><span id="leakEcbNum">—</span><small>ECB</small></div>
+                <div class="gauge"><svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="34"/><circle id="leakCbcRing" cx="40" cy="40" r="34"/></svg><span id="leakCbcNum">—</span><small>CBC</small></div>
+              </div></section>
+              <section data-enter><h2>PIXEL HISTOGRAM</h2><canvas id="histogramCanvas" width="600" height="180" aria-label="ECB and CBC pixel intensity histograms"></canvas><p>Both histograms flatten. The leak is in repeated blocks.</p></section>
+            </div>
+            <section class="events" data-enter><h2>API EVENT LOG</h2><ol id="eventLog" aria-live="polite"></ol></section>
+          </div>
+        </div>
+      </div>
+    </main>
+    <footer>ECB is deterministic. CBC chains blocks. Neither gives you integrity — use AES-GCM in production.</footer>
+  </div>
+  <script src="/vendor/anime.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

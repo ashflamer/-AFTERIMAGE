@@ -5,7 +5,7 @@
  *
  * No encryption happens here. The browser decodes an image to 65536
  * grayscale bytes, posts them to the server, and renders what comes back.
- * All motion is anime.js (public/vendor/anime.min.js).
+ * Timelines use the bundled anime.js; control feedback is styled in CSS.
  */
 
 const $ = id => document.getElementById(id);
@@ -246,7 +246,7 @@ function drawOverlay(canvas, dupMap) {
     if (dupMap[i] === 1) {
       const col = i % 16;
       const row = Math.floor(i / 16);
-      ctx.fillRect(col * 16, row * 16, 16, 16);
+      ctx.fillRect(col * 16, row, 16, 1);
     }
   }
   ctx.strokeStyle = 'rgba(196,71,31,0.5)';
@@ -426,80 +426,47 @@ function animatePipeDot() {
   });
 }
 
-function sweepScan(panel) {
+// Reveal the finished pixels and the read head together, at the plate's
+// actual size. No scan runs while the server is idle or still computing.
+function printPlate(panel) {
+  if (motionQuery?.matches) return;
   const scan = panel.querySelector('.scan');
-  if (!scan || reduced) return;
-  anime.remove(scan);
-  scan.style.opacity = '1';
-  anime({
-    targets: scan,
-    translateY: ['-8%', '108%'],
-    duration: 720,
-    easing: 'easeInOutQuad',
-    complete: () => {
-      scan.style.opacity = '0';
-    },
-  });
-}
-
-/* ------------------------------------------------------------------ */
-/* Reveal + New IV badge/pulse                                         */
-/* ------------------------------------------------------------------ */
-
-function reveal() {
-  const panels = [panelOriginal, panelECB, panelCBC];
-  if (reduced) {
-    panels.forEach(panel => {
-      panel.style.opacity = '1';
-      panel.style.transform = 'none';
-      panel.style.outline = 'none';
-    });
-    [canvasOriginal, canvasECB, canvasCBC].forEach(canvas => {
-      canvas.style.filter = 'none';
-      canvas.style.transform = 'none';
-    });
-    return;
+  const canvas = panel.querySelector('canvas');
+  const timing = { duration: 410, easing: 'cubic-bezier(.23,.7,.32,1)' };
+  for (const element of [scan, canvas]) {
+    element.getAnimations().forEach(animation => animation.cancel());
   }
-  panels.forEach(panel => {
-    anime.remove(panel);
-    panel.style.outline = '1px solid rgba(196,71,31,0)';
-  });
-  anime({
-    targets: panels,
-    translateY: [18, 0],
-    opacity: [0, 1],
-    duration: 600,
-    easing: 'easeOutExpo',
-    delay: anime.stagger(80),
-  });
-  // Edge pulse instead of a CSS keyframe flash — all motion stays in anime.js.
-  anime({
-    targets: panels,
-    outlineColor: ['rgba(196,71,31,0.9)', 'rgba(196,71,31,0)'],
-    duration: 700,
-    easing: 'easeOutQuad',
-    delay: anime.stagger(80),
-  });
-  [canvasOriginal, canvasECB].forEach(canvas => {
-    anime.remove(canvas);
-    anime({
-      targets: canvas,
-      filter: ['blur(5px)', 'blur(0px)'],
-      scale: [1.02, 1],
-      duration: 650,
-      easing: 'easeOutExpo',
-    });
-  });
-  anime.remove(canvasCBC);
-  anime({
-    targets: canvasCBC,
-    filter: ['blur(5px)', 'blur(0px)'],
-    scale: [1.02, 1],
-    duration: 650,
-    easing: 'easeOutExpo',
-    delay: 120,
-  });
+  canvas.animate([{ clipPath: 'inset(0 0 100% 0)' }, { clipPath: 'inset(0)' }], timing);
+  scan.animate([{ top: '0%', opacity: .85 }, { top: '100%', opacity: 0 }], timing);
 }
+
+// Each grayscale AES block is 16 consecutive pixels on one 256-pixel row.
+const bay = $('compare');
+const probe = bay.querySelector('.probe');
+const probeBlock = $('probeBlock');
+function inspectBlock(index) {
+  probeBlock.value = index;
+  $('probeReadout').textContent = String(index).padStart(4, '0') + ' / 4095';
+  bay.style.setProperty('--probe-x', (index % 16) * 100 / 16 + '%');
+  bay.style.setProperty('--probe-y', Math.floor(index / 16) * 100 / 256 + '%');
+  bay.classList.add('probing');
+}
+probeBlock.addEventListener('input', () => inspectBlock(probeBlock.valueAsNumber));
+probeBlock.addEventListener('focus', () => inspectBlock(probeBlock.valueAsNumber));
+probeBlock.addEventListener('blur', () => bay.classList.remove('probing'));
+bay.querySelectorAll('.canvas-wrap').forEach(wrap => {
+  function point(event) {
+    if (probe.hidden) return;
+    const rect = wrap.getBoundingClientRect();
+    const bin = (offset, extent, count) => Math.max(0, Math.min(count - 1, Math.floor(offset / extent * count)));
+    inspectBlock(bin(event.clientY - rect.top, rect.height, 256) * 16 + bin(event.clientX - rect.left, rect.width, 16));
+  }
+  wrap.addEventListener('pointerdown', point);
+  wrap.addEventListener('pointermove', point);
+  wrap.addEventListener('pointerleave', () => {
+    if (document.activeElement !== probeBlock) bay.classList.remove('probing');
+  });
+});
 
 function showBadgeAndPulse() {
   unchangedBadge.classList.remove('hidden');
@@ -529,21 +496,7 @@ function showBadgeAndPulse() {
       }, 1400);
     },
   });
-  anime.remove(canvasCBC);
-  anime({
-    targets: canvasCBC,
-    scale: [1, 1.04],
-    duration: 220,
-    easing: 'easeOutQuad',
-    complete: () => {
-      anime({
-        targets: canvasCBC,
-        scale: [1.04, 1],
-        duration: 280,
-        easing: 'easeInOutQuad',
-      });
-    },
-  });
+
 }
 
 /* ------------------------------------------------------------------ */
@@ -597,9 +550,9 @@ async function randomise(url, input, label) {
 function handleResult(data, scope) {
   const stats = data.stats;
   lastResult = {
-    ecbBytes: data.ecb ? base64ToBytes(data.ecb) : null,
+    ecbBytes: data.ecb ? base64ToBytes(data.ecb) : lastResult?.ecbBytes,
     cbcBytes: base64ToBytes(data.cbc),
-    ecbDup: stats.ecb ? base64ToBytes(stats.ecb.dupMapBase64) : null,
+    ecbDup: stats.ecb ? base64ToBytes(stats.ecb.dupMapBase64) : lastResult?.ecbDup,
     cbcDup: base64ToBytes(stats.cbc.dupMapBase64),
   };
 
@@ -618,7 +571,8 @@ function handleResult(data, scope) {
     setInsight(
       'ECB repeated ' + stats.ecb.repeats + ' of 4096 blocks. CBC repeated ' + stats.cbc.repeats + '.'
     );
-    reveal();
+    printPlate(panelECB);
+    printPlate(panelCBC);
   } else {
     // scope 'cbc' — the New IV proof. Never touch #canvasECB.
     renderGray(canvasCBC, lastResult.cbcBytes, SIZE);
@@ -626,9 +580,11 @@ function handleResult(data, scope) {
     setGauge(leakCbcRing, leakCbcNum, stats.cbc.leakPct);
     drawHistogram(stats.hists);
     setInsight('New IV, same image: ECB is identical every time. CBC is different every time.');
+    printPlate(panelCBC);
     showBadgeAndPulse();
   }
 
+  probe.hidden = false;
   if (data.meta && typeof data.meta.durationMs === 'number') {
     apiLatency.textContent = 'API ' + data.meta.durationMs + 'MS';
   }
@@ -693,8 +649,6 @@ async function runEncrypt(scope) {
     appendLog(payload.message);
     const node = stageToNode[payload.stage];
     if (node) markNode(node);
-    if (payload.stage === 'ecb') sweepScan(panelECB);
-    if (payload.stage === 'cbc') sweepScan(panelCBC);
     if (payload.stage === 'done') closeEvents();
   });
 

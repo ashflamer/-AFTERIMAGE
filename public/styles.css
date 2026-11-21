@@ -48,3 +48,20 @@ h1{font:400 clamp(40px,6vw,86px)/.98 var(--serif);letter-spacing:-.045em;margin:
 @media(max-width:999px){.shell{padding:28px 32px 48px}.hero,.workspace{grid-template-columns:minmax(0,1fr)}.hero{gap:24px}.hero h1{max-width:17ch}#dropzone{min-height:190px}.workspace{gap:24px}.rail{display:grid;grid-template-columns:1fr 1.15fr .85fr;gap:18px;padding:0 0 20px;border:0;border-bottom:1px solid var(--rule)}.rail section{border:0;padding:0}.rail section + section{border-left:1px solid var(--rule);padding-left:18px}}
 @media(max-width:640px){.shell{padding:20px 18px 36px}.mast{gap:8px}.mast-readouts{font-size:10px}#apiLatency{display:none}.hero{padding:28px 0}.rail{grid-template-columns:1fr;gap:14px}.rail section + section{border:0;border-top:1px solid var(--rule);padding:14px 0 0}.instrument-bay{padding:12px}.panels{grid-template-columns:1fr;gap:18px}.panel,.panel:first-child,.panel:last-child{padding:0}.panel + .panel{border:0;border-top:1px solid var(--bay-rule);padding-top:14px}.measurements{grid-template-columns:1fr}.measurements section + section{border:0;border-top:1px solid var(--rule);padding:18px 0 0}.load-curtain{padding:24px}.pipe-node{font-size:9px;letter-spacing:.08em}.stage-head h2{font-size:28px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}}
+
+/* A shared read head, drawn outside the canvases so it never alters pixels. */
+.probe:not([hidden]){display:grid;grid-template-columns:auto minmax(40px,1fr) auto;align-items:center;gap:6px 16px;border-top:1px solid var(--bay-rule);margin-top:16px;padding-top:12px}
+.probe label,.probe span{font:10px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.1em;font-variant-numeric:tabular-nums}
+.probe input{width:100%;margin:0;accent-color:#c7d6cf;cursor:ew-resize}
+.probe small{grid-column:1/-1;color:#b3b3ac;font:11px/1.5 var(--mono)}
+.probing .canvas-wrap{cursor:crosshair}
+.canvas-wrap::after{content:"";position:absolute;pointer-events:none;left:var(--probe-x,0);top:var(--probe-y,0);width:6.25%;height:max(2px,.390625%);background:var(--paper-2);outline:1px solid var(--ink);opacity:0}
+.probing .canvas-wrap::after{opacity:1}
+#dropzone::after{content:"";position:absolute;inset:8px;pointer-events:none;background:linear-gradient(var(--teal),var(--teal)) top left/12px 1px,linear-gradient(var(--teal),var(--teal)) top left/1px 12px,linear-gradient(var(--teal),var(--teal)) bottom right/12px 1px,linear-gradient(var(--teal),var(--teal)) bottom right/1px 12px;background-repeat:no-repeat;opacity:0}
+#dropzone:is(:focus-within,.dragging)::after{opacity:1}
+@media(hover:hover){#dropzone:hover::after{opacity:1}}
+@media(prefers-reduced-motion:no-preference){
+  #dropzone::after{transform:scale(.98);transition:transform .18s ease-out,opacity .18s}
+  #dropzone:is(:hover,:focus-within,.dragging)::after{transform:scale(1)}
+  .canvas-wrap::after{transition:opacity .12s}
+}

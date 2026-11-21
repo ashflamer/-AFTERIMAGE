@@ -1,33 +1,50 @@
-# PIXEL CIPHER LAB
+# Pixel Cipher Lab
 
-Upload a picture. Watch one mode fail to hide it.
+[Open the lab on Render](https://pixel-cipher-lab.onrender.com/) · [API health](https://pixel-cipher-lab.onrender.com/api/health)
 
-PIXEL CIPHER LAB is a small visual lab for AES-128. You upload an image, the server encrypts it in ECB and CBC mode, and the browser shows the plaintext next to both ciphertexts. ECB leaks the structure of the image because identical plaintext blocks produce identical ciphertext blocks. CBC chains each block to the previous one, so the leak disappears.
+Encrypt the same image with the same AES-128 key in two modes, then inspect the actual ciphertext bytes as pixels. ECB encrypts identical 16-byte blocks identically. CBC mixes each block with the previous ciphertext block (or the IV for the first block), so repeated input doesn't produce the same visible pattern.
 
-Run it:
+## Reproduce the checkerboard result
 
-    node server.js
+1. Open **Pattern press**, select **Checkerboard**, leave **Pitch** at **16 px**, and click **Encrypt pattern**.
+2. Check **Block analysis**. Each row consists of 16-pixel runs of dark or light gray. One pixel is one byte, so each run is exactly one AES block. There are only two distinct input blocks in the whole image: ECB produces **4,094 repeats out of 4,096 blocks**. The count excludes the first occurrence of each distinct block.
+3. In **Match finder**, read the top and bottom hex strips for each mode. They're two different positions with identical plaintext. Their ECB bytes match exactly; compare the CBC bytes at those same positions. **Next pair** selects another example.
+4. Click **New IV** without changing the image or key. The ECB plate stays byte-for-byte identical. Only CBC needs to be encrypted again.
 
-Then open http://localhost:8000
+## Working with plates
 
-On startup the server runs a NIST known-answer check and prints `engine ok: 69c4e0d86a7b0430d8cdb78070b4c55a` if the AES engine is correct.
+| To… | Use |
+|---|---|
+| Try another input | Select **Penguin**, **Text**, or **Gradient**; print rings or a weave in **Pattern press**; or drop a PNG, JPG, or WebP (up to 12 MB). |
+| Inspect one position | Point at a plate or move the **Block probe** slider. Its marker tracks the same 16 consecutive pixels in all three images. The slider also accepts arrow keys. |
+| Locate repeats | **Show blocks** overlays a grid and highlights repeated ciphertext blocks. The histogram counts individual byte values, not repeated blocks. |
+| Present or save a result | **Present** (shortcut: **P**) hides the controls and analytics. **Save plate · PNG** exports the three labeled images at 864 × 390, without the overlays, key, or IV. The PNG includes the plaintext image. |
 
-## Host it on Render (free)
+## Run locally
 
-[Deploy Pixel Cipher Lab on Render](https://render.com/deploy?repo=https://github.com/ashflamer/-AFTERIMAGE). Sign in, review the Blueprint’s **Free** web service, and confirm deployment. The configuration in `render.yaml` runs the existing Node server on Render’s assigned port; no database, environment secrets, or separate frontend host is needed.
+From the repository root, with **Node.js 22.x**:
 
-When the service shows **Live**, open its `onrender.com` URL. Append `/api/health` to check for `"ok":true`. The service stays accessible with your laptop off, but the free instance can sleep when idle, so the first visit may take longer.
+```sh
+npm start
+```
 
-## API
+Open <http://localhost:8000>. No dependency install, build step, or database is required. `PORT` overrides the default. The server runs an AES known-answer test before it listens. To run that test without starting the server:
 
-| Method | Path | What it does |
+```sh
+node -e "require('./lib/engine').selfTest()"
+```
+
+For your own hosted instance, [deploy the Render Blueprint](https://render.com/deploy?repo=https://github.com/ashflamer/-AFTERIMAGE). [`render.yaml`](render.yaml) configures a free Node web service from `main` with `/api/health` as its health check. A free instance can take a moment to wake after inactivity.
+
+## What goes to the server
+
+The browser center-crops the image to a square and converts it to 256 × 256 grayscale pixels. It sends those **65,536 bytes**, not the original image file, along with the key and IV. The Node server serves both the interface and the API; encryption happens in [`lib/engine.js`](lib/engine.js).
+
+| Method | Endpoint | Contract |
 |---|---|---|
-| GET | /api/health | Reports engine status and uptime |
-| GET | /api/events?id=... | Server-sent events for one encrypt job |
-| POST | /api/new-key | Returns a fresh random 128-bit key as hex |
-| POST | /api/new-iv | Returns a fresh random IV as hex |
-| POST | /api/encrypt | Encrypts 65536 grayscale bytes in ECB, CBC, or both |
+| `GET` | `/api/health` | Returns `ok`, `engine`, and `uptime` in seconds. |
+| `POST` | `/api/new-key` or `/api/new-iv` | Returns a random 16-byte value as 32 hex characters, under `key` or `iv`. |
+| `GET` | `/api/events?id=<jobId>` | Opens a server-sent event stream. Subscribe before posting the matching job to see its `stage` events in the API event log. |
+| `POST` | `/api/encrypt` | Send JSON with `jobId`, `key`, `iv`, `gray` (base64 pixels), and `scope` (`both` or `cbc`). Returns base64 ciphertext for the requested modes, block statistics, byte histograms, and run metadata. |
 
-## ECB vs CBC
-
-ECB encrypts every 16-byte block on its own, so the same plaintext block always gives the same ciphertext block. Flat areas of an image become flat areas of repeated ciphertext, and the picture shows through. CBC XORs each plaintext block with the previous ciphertext block before encrypting, so identical blocks encrypt differently and the structure is hidden. Neither mode provides integrity — a tampered ciphertext still decrypts. Use AES-GCM in production.
+This is a visual experiment, not a private file-encryption tool. Use sample images and disposable keys on the public instance. Neither mode here authenticates ciphertext; use a vetted authenticated-encryption library for real data.

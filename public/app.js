@@ -833,74 +833,51 @@ async function checkHealth() {
 
 function startLoading() {
   const curtain = document.querySelector('.load-curtain');
-  const num = document.querySelector('.load-num');
-  const step = document.querySelector('.load-step');
-  const enters = document.querySelectorAll('[data-enter]');
-  const steps = ['STARTING ENGINE', 'BOOTING AES-128', 'CHECKING API', 'READY'];
-  const at = [0, 350, 700, 1050];
+  if (reduced) return;
 
-  if (reduced) {
-    step.textContent = 'READY';
-    num.textContent = '100';
-    enters.forEach(el => {
-      el.style.opacity = '1';
-      el.style.transform = 'none';
-    });
-    curtain.style.display = 'none';
-    return;
+  const shell = document.querySelector('.shell');
+  const ink = $('proofInk').getContext('2d');
+  const noise = $('proofNoise').getContext('2d');
+  if (!ink || !noise) return;
+
+  // Sample the same penguin used by the experiment. This is a print proof,
+  // not an encryption request or a progress estimate for the health check.
+  const source = makeSample('penguin');
+  const stock = ['#141414', '#474747', '#918f87', '#d2cec4', '#efede6'];
+  let seed = 101;
+  for (let y = 0; y < 64; y++) {
+    for (let x = 0; x < 64; x++) {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      noise.fillStyle = stock[(seed >>> 16) % stock.length];
+      noise.fillRect(x, y, 1, 1);
+      const value = source[(4 * y + 2) * 256 + 4 * x + 2];
+      ink.fillStyle = stock[Math.round(value * 4 / 255)];
+      ink.fillRect(x, y, 1, 1);
+    }
   }
 
-  enters.forEach(el => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(18px)';
-  });
-  steps.forEach((text, i) => {
-    setTimeout(() => {
-      step.textContent = text;
-    }, at[i]);
-  });
-
-  const tl = anime.timeline({
-    easing: 'easeOutExpo',
-    complete: () => {
-      curtain.style.display = 'none';
-    },
-  });
-  tl.add({ targets: '.load-rule', scaleX: [0, 1], duration: 1100 })
-    .add(
-      {
-        targets: '.load-num',
-        innerHTML: [0, 100],
-        round: 1,
-        duration: 1100,
-        easing: 'linear',
-        update: () => {
-          const el = document.querySelector('.load-num');
-          if (el) el.textContent = String(Math.round(parseFloat(el.textContent) || 0)).padStart(3, '0');
-        },
-      },
-      0
-    )
-    .add(
-      {
-        targets: '.load-curtain',
-        translateY: ['0%', '-100%'],
-        duration: 750,
-        easing: 'easeInOutQuart',
-      },
-      '+=180'
-    )
-    .add(
-      {
-        targets: '[data-enter]',
-        translateY: [18, 0],
-        opacity: [0, 1],
-        delay: anime.stagger(70),
-        duration: 650,
-      },
-      '-=420'
-    )
-    .add({ targets: '.load-curtain', display: 'none', duration: 1 });
+  const listeners = new AbortController();
+  const options = { signal: listeners.signal };
+  const finish = () => {
+    listeners.abort();
+    clearTimeout(fallback);
+    curtain.hidden = true;
+    shell.inert = false;
+  };
+  // Do not trap the visitor if CSS animations are suppressed or interrupted.
+  const fallback = setTimeout(finish, 1800);
+  $('skipProof').addEventListener('click', finish, options);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') finish();
+  }, options);
+  curtain.addEventListener('animationend', event => {
+    if (event.animationName === 'lift-proof') finish();
+  }, options);
+  motionQuery?.addEventListener('change', event => {
+    if (event.matches) finish();
+  }, options);
+  shell.inert = true;
+  curtain.hidden = false;
 }
 
 /* ------------------------------------------------------------------ */

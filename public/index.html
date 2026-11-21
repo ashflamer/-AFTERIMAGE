@@ -56,6 +56,12 @@
               <article id="panelECB" class="panel"><h3>NO. 02 / ECB</h3><div class="tag">DETERMINISTIC</div><div class="canvas-wrap"><canvas id="canvasECB" class="image" width="256" height="256" aria-label="ECB encrypted image"></canvas><div class="scan"></div><span id="unchangedBadge" class="hidden">UNCHANGED</span></div><div class="panel-foot"><span>4096 BLOCKS</span><span>LEAKS STRUCTURE</span></div></article>
               <article id="panelCBC" class="panel"><h3>NO. 03 / CBC</h3><div class="tag">RANDOMISED</div><div class="canvas-wrap"><canvas id="canvasCBC" class="image" width="256" height="256" aria-label="CBC encrypted image"></canvas><div class="scan"></div></div><div class="panel-foot"><span>4096 BLOCKS</span><span>CHAINED</span></div></article>
             </div>
+            <div class="probe" hidden>
+              <label for="probeBlock">Block probe</label>
+              <input id="probeBlock" type="range" min="0" max="4095" value="0" aria-describedby="probeHint">
+              <span id="probeReadout" aria-hidden="true">0000 / 4095</span>
+              <small id="probeHint">Point at a plate or scrub to compare the same 16 bytes.</small>
+            </div>
           </section>
           <p id="presentCaption">Same key. Same image. Only the mode changed.</p>
           <div class="analytics">

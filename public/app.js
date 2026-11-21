@@ -138,9 +138,7 @@ async function handleFile(file) {
   const url = URL.createObjectURL(file);
   try {
     const img = await loadImage(url);
-    currentGray = imageToGray(img);
-    renderGray(canvasOriginal, currentGray, SIZE);
-    await runEncrypt('both');
+    submitPlate(imageToGray(img));
   } catch (error) {
     setInsight('Could not read that image.', true);
   } finally {
@@ -221,6 +219,39 @@ function makeSample(kind) {
 /* ------------------------------------------------------------------ */
 /* Rendering                                                           */
 /* ------------------------------------------------------------------ */
+
+// Pattern press: preview locally, submit only when the plate is printed.
+const pressPreview = $('pressPreview');
+function inkPattern() {
+  const pitch = $('pressPitch').valueAsNumber;
+  const die = $('pressDie').value;
+  $('pitchValue').value = pitch + ' px';
+  const bytes = new Uint8Array(SIZE);
+  for (let y = 0; y < 256; y++) {
+    for (let x = 0; x < 256; x++) {
+      const u = Math.floor(x / pitch), v = Math.floor(y / pitch);
+      let band = u + v;
+      if (die === 'rings') band = Math.floor(Math.hypot(x - 128, y - 128) / pitch);
+      if (die === 'weave') band = (u + v) % 2 ? Math.floor(x * 4 / pitch) : Math.floor(y * 4 / pitch);
+      bytes[y * 256 + x] = band % 2 ? 40 : 228;
+    }
+  }
+  renderGray(pressPreview, bytes, SIZE);
+}
+$('pressPitch').addEventListener('input', inkPattern);
+$('pressDie').addEventListener('change', inkPattern);
+$('patternPress').addEventListener('toggle', () => { if ($('patternPress').open) inkPattern(); });
+$('printPattern').addEventListener('click', () => submitPlate(canvasToGray(pressPreview)));
+
+function submitPlate(bytes) {
+  if (busy) return;
+  currentGray = bytes;
+  renderGray(canvasOriginal, bytes, SIZE);
+  $('exportPlate').disabled = true;
+  probe.hidden = true;
+  document.querySelector('.match-finder').hidden = true;
+  runEncrypt('both');
+}
 
 function renderGray(canvas, bytes, size) {
   const ctx = canvas.getContext('2d');
@@ -547,9 +578,100 @@ async function randomise(url, input, label) {
 /* Encrypt flow                                                        */
 /* ------------------------------------------------------------------ */
 
+// Index exact 16-byte matches, not pixels that merely look alike. Keep one
+// witness per repeated occurrence, paired with its first plaintext block.
+let pairs = [], pairIndex = 0;
+function indexPairs(plain) {
+  const first = new Map();
+  pairs = [];
+  pairIndex = 0;
+  for (let block = 0; block < BLOCKS; block++) {
+    const key = String.fromCharCode(...plain.subarray(block * 16, block * 16 + 16));
+    if (first.has(key)) pairs.push([first.get(key), block]);
+    else first.set(key, block);
+  }
+}
+function showPair() {
+  const rows = $('pairRows');
+  rows.replaceChildren();
+  document.querySelector('.match-finder').hidden = false;
+  $('nextPair').disabled = pairs.length < 2;
+  if (!pairs.length) {
+    $('pairStatus').textContent = 'No repeated plaintext blocks. Try a checkerboard from the pattern press.';
+    return;
+  }
+  const [a, b] = pairs[pairIndex];
+  $('pairStatus').textContent = `Block ${a} (top) and block ${b} (bottom) have identical input. Compare their 16 bytes in hex.`;
+  for (const [label, bytes] of [['Plaintext', currentGray], ['ECB', lastResult.ecbBytes], ['CBC', lastResult.cbcBytes]]) {
+    const row = document.createElement('div');
+    row.className = 'pair-row';
+    const heading = document.createElement('h3');
+    heading.textContent = label;
+    const plate = document.createElement('div');
+    plate.className = 'byte-plate';
+    for (const pos of [a, b]) {
+      const line = document.createElement('div');
+      line.className = 'byte-line';
+      for (const byte of bytes.subarray(pos * 16, pos * 16 + 16)) {
+        const cell = document.createElement('span');
+        cell.textContent = byte.toString(16).padStart(2, '0');
+        cell.style.backgroundColor = `rgb(${byte},${byte},${byte})`;
+        cell.style.color = byte < 118 ? '#fff' : '#000';
+        line.append(cell);
+      }
+      plate.append(line);
+    }
+    const same = bytes.subarray(a * 16, a * 16 + 16).every((n, i) => n === bytes[b * 16 + i]);
+    const mark = document.createElement('span');
+    mark.className = 'pair-mark' + (same ? ' same' : '');
+    mark.textContent = same ? 'Match' : 'Differ';
+    row.append(heading, plate, mark);
+    rows.append(row);
+  }
+}
+$('nextPair').addEventListener('click', () => {
+  pairIndex = (pairIndex + 1) % pairs.length;
+  showPair();
+});
+
+// Export the measured bytes rather than a screenshot of animated overlays.
+$('exportPlate').addEventListener('click', () => {
+  if (!lastResult?.ecbBytes) return;
+  const sheet = document.createElement('canvas');
+  sheet.width = 864;
+  sheet.height = 390;
+  const ctx = sheet.getContext('2d');
+  ctx.fillStyle = '#EFEDE6';
+  ctx.fillRect(0, 0, sheet.width, sheet.height);
+  ctx.fillStyle = '#141414';
+  ctx.font = '26px Georgia, serif';
+  ctx.fillText('Pixel Cipher Lab', 24, 36);
+  ctx.font = '12px monospace';
+  ctx.fillText('AES-128 / COMPARISON PLATE', 24, 58);
+  const tile = document.createElement('canvas');
+  tile.width = tile.height = 256;
+  for (const [i, [label, bytes]] of [['01 / PLAINTEXT', lastResult.plain], ['02 / ECB', lastResult.ecbBytes], ['03 / CBC', lastResult.cbcBytes]].entries()) {
+    const x = 24 + i * 280;
+    renderGray(tile, bytes, SIZE);
+    ctx.drawImage(tile, x, 78);
+    ctx.fillText(label, x, 358);
+  }
+  sheet.toBlob(blob => {
+    if (!blob) return;
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'pixel-cipher-plate.png';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    appendLog('comparison plate exported');
+  });
+});
+
 function handleResult(data, scope) {
   const stats = data.stats;
   lastResult = {
+    plain: currentGray,
+    key: data.meta.key,
     ecbBytes: data.ecb ? base64ToBytes(data.ecb) : lastResult?.ecbBytes,
     cbcBytes: base64ToBytes(data.cbc),
     ecbDup: stats.ecb ? base64ToBytes(stats.ecb.dupMapBase64) : lastResult?.ecbDup,
@@ -584,6 +706,9 @@ function handleResult(data, scope) {
     showBadgeAndPulse();
   }
 
+  if (scope === 'both') indexPairs(currentGray);
+  showPair();
+  $('exportPlate').disabled = false;
   probe.hidden = false;
   if (data.meta && typeof data.meta.durationMs === 'number') {
     apiLatency.textContent = 'API ' + data.meta.durationMs + 'MS';
@@ -615,16 +740,18 @@ async function runEncrypt(scope) {
     setInsight('Upload an image to begin.');
     return;
   }
+  busy = true;
   let key;
   let iv;
   try {
     ({ key, iv } = await ensureKeyIv());
   } catch (error) {
+    busy = false;
     setInsight(error.message, true);
     return;
   }
+  if (scope === 'cbc' && (lastResult?.plain !== currentGray || lastResult.key !== key)) scope = 'both';
 
-  busy = true;
   const jobId = 'job-' + ++jobCounter;
   resetPipeline();
   animatePipeDot();
@@ -834,9 +961,7 @@ document.addEventListener('drop', event => event.preventDefault());
 
 document.querySelectorAll('#sampleRow button[data-sample]').forEach(button => {
   button.addEventListener('click', () => {
-    currentGray = makeSample(button.dataset.sample);
-    renderGray(canvasOriginal, currentGray, SIZE);
-    runEncrypt('both');
+    submitPlate(makeSample(button.dataset.sample));
   });
 });
 

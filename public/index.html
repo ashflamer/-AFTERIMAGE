@@ -37,6 +37,17 @@
         <aside class="rail" aria-label="Experiment controls">
           <section data-enter><h2>01 / IMAGE</h2><button id="chooseBtn" type="button">CHOOSE IMAGE</button>
             <div class="field-label">Sample plates</div><div id="sampleRow"><button type="button" data-sample="penguin">Penguin</button><button type="button" data-sample="text">Text</button><button type="button" data-sample="gradient">Gradient</button></div>
+            <details class="press" id="patternPress">
+              <summary>Pattern press</summary>
+              <div class="press-sheet">
+                <canvas id="pressPreview" width="256" height="256" aria-label="Generated grayscale pattern preview"></canvas>
+                <label for="pressDie">Printing die</label>
+                <select id="pressDie"><option value="checks">Checkerboard</option><option value="rings">Rings</option><option value="weave">Weave</option></select>
+                <div class="press-scale"><label for="pressPitch">Pitch</label><output id="pitchValue" for="pressPitch">16 px</output></div>
+                <input id="pressPitch" type="range" min="2" max="48" value="16">
+                <button id="printPattern" type="button">Encrypt pattern</button>
+              </div>
+            </details>
           </section>
           <section data-enter><h2>02 / KEY &amp; IV</h2>
             <div class="field-head"><label for="keyInput">Key / hex</label><button id="randomKeyBtn" type="button" aria-label="Randomise key">Randomise</button></div>
@@ -44,7 +55,7 @@
             <div class="field-head"><label for="ivInput">IV / hex</label><button id="randomIvBtn" type="button" aria-label="Randomise IV">Randomise</button></div>
             <input id="ivInput" class="hex" type="text" placeholder="32 hex characters" spellcheck="false" autocomplete="off">
           </section>
-          <section data-enter><h2>03 / OUTPUT</h2><div class="actions"><button id="newIvBtn" type="button">NEW IV</button><button id="gridToggle" type="button" aria-pressed="false">SHOW BLOCKS</button></div></section>
+          <section data-enter><h2>03 / OUTPUT</h2><div class="actions"><button id="newIvBtn" type="button">NEW IV</button><button id="gridToggle" type="button" aria-pressed="false">SHOW BLOCKS</button><button id="exportPlate" type="button" disabled>Save plate · PNG</button></div></section>
         </aside>
         <div class="stage">
           <div class="stage-head" data-enter><h2>Comparison plate</h2><button id="presentBtn" type="button">PRESENT</button></div>
@@ -66,6 +77,11 @@
           <p id="presentCaption">Same key. Same image. Only the mode changed.</p>
           <div class="analytics">
             <p id="insightText" data-enter aria-live="polite">Upload an image to begin.</p>
+            <section class="match-finder" aria-labelledby="matchTitle" hidden>
+              <div class="match-heading"><div><small>FIG. 02 / BLOCK PAIRS</small><h2 id="matchTitle">Match finder</h2></div><button id="nextPair" type="button">Next pair →</button></div>
+              <p id="pairStatus" role="status"></p>
+              <div id="pairRows"></div>
+            </section>
             <div class="measurements">
               <section data-enter><h2>BLOCK ANALYSIS</h2><div class="gauges">
                 <div class="gauge"><svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="34"/><circle id="leakEcbRing" cx="40" cy="40" r="34"/></svg><span id="leakEcbNum">—</span><small>ECB</small></div>

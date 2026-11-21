@@ -65,3 +65,13 @@ h1{font:400 clamp(40px,6vw,86px)/.98 var(--serif);letter-spacing:-.045em;margin:
   #dropzone:is(:hover,:focus-within,.dragging)::after{transform:scale(1)}
   .canvas-wrap::after{transition:opacity .12s}
 }
+
+/* Fold-out printing die and facing byte specimens. */
+.press{border-block:1px solid var(--rule);margin-top:18px}.press summary{cursor:pointer;padding:10px 1px;color:var(--teal);font:11px var(--mono);text-transform:uppercase;letter-spacing:.08em}
+.press-sheet{display:grid;gap:8px;padding:4px 0 14px}.press-sheet canvas{width:100%;height:110px;object-fit:cover;border:1px solid var(--rule);image-rendering:pixelated}.press-sheet select{font:12px var(--mono);padding:6px;color:var(--ink);background:var(--paper-2);border:1px solid var(--rule)}
+.press-sheet label,.press-scale output,.match-heading small,.pair-row h3,.pair-mark{font:10px/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase}.press-scale{display:flex;justify-content:space-between;margin-top:4px}.press-sheet input{accent-color:var(--teal);margin:0 0 6px;width:100%}
+.match-finder{border-block-start:1px solid var(--ink);padding:22px 0}.match-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.match-heading small{color:var(--orange)}.match-heading #matchTitle{font:normal 30px var(--serif);letter-spacing:-.04em;text-transform:none;margin:3px 0}.match-finder p{font-size:13px;color:var(--muted);margin:8px 0 12px}.pair-row{display:grid;grid-template-columns:6em 1fr minmax(4em,auto);align-items:center;gap:10px;border-top:1px solid var(--rule);padding:9px 0}.byte-plate{min-width:0;display:grid;gap:3px}.byte-line{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:1px}.byte-line span{text-align:center;font:11px/1.8 var(--mono);text-transform:uppercase}.pair-mark{color:var(--teal);text-align:right}.pair-mark.same{color:var(--orange)}
+@media(max-width:750px){.pair-row{grid-template-columns:1fr auto;gap:5px}.byte-plate{grid-row:2;grid-column:1/-1}.byte-line span{font-size:10px}}
+@media(prefers-reduced-motion:no-preference){.press[open] .press-sheet{animation:unfold-sheet .24s ease-out}.byte-plate{animation:ink-strip .32s ease-out both}.pair-row:nth-child(2) .byte-plate{animation-delay:35ms}.pair-row:nth-child(3) .byte-plate{animation-delay:70ms}@keyframes unfold-sheet{from{opacity:0;transform:translateY(-4px)}}@keyframes ink-strip{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0)}}}
+
+button:disabled{opacity:.5;cursor:not-allowed;background:var(--paper);color:var(--muted)}

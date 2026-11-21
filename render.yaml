@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: pixel-cipher-lab
+    runtime: node
+    plan: free
+    branch: main
+    buildCommand: node -e "require('./lib/engine').selfTest()"
+    startCommand: node server.js
+    healthCheckPath: /api/health

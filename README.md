@@ -12,6 +12,12 @@ Then open http://localhost:8000
 
 On startup the server runs a NIST known-answer check and prints `engine ok: 69c4e0d86a7b0430d8cdb78070b4c55a` if the AES engine is correct.
 
+## Host it on Render (free)
+
+[Deploy Pixel Cipher Lab on Render](https://render.com/deploy?repo=https://github.com/ashflamer/-AFTERIMAGE). Sign in, review the Blueprint’s **Free** web service, and confirm deployment. The configuration in `render.yaml` runs the existing Node server on Render’s assigned port; no database, environment secrets, or separate frontend host is needed.
+
+When the service shows **Live**, open its `onrender.com` URL. Append `/api/health` to check for `"ok":true`. The service stays accessible with your laptop off, but the free instance can sleep when idle, so the first visit may take longer.
+
 ## API
 
 | Method | Path | What it does |

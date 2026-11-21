@@ -33,6 +33,17 @@
           <small>PNG, JPG or WEBP — up to 12 MB</small>
         </div>
       </section>
+      <section class="round-trace" aria-labelledby="traceTitle">
+        <div class="trace-copy">
+          <p class="trace-label">AES round detail / 01</p>
+          <h2 id="traceTitle">ShiftRows</h2>
+          <p>Each row rotates left by its row index. Bytes wrap around without changing value.</p>
+        </div>
+        <figure class="trace-state"><figcaption>Input state</figcaption><div id="traceInput" class="trace-grid"></div></figure>
+        <span class="trace-arrow" aria-hidden="true">→</span>
+        <figure class="trace-state"><figcaption>After ShiftRows</figcaption><div id="traceOutput" class="trace-grid"></div></figure>
+        <button id="traceReplay" type="button" aria-label="Replay ShiftRows animation">Replay ↺</button>
+      </section>
       <div class="workspace">
         <aside class="rail" aria-label="Experiment controls">
           <section data-enter><h2>01 / IMAGE</h2><button id="chooseBtn" type="button">CHOOSE IMAGE</button>

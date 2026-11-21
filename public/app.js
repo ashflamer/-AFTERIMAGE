@@ -935,6 +935,70 @@ document.addEventListener('keydown', event => {
   togglePresent();
 });
 
+// A standalone illustration, not part of an encryption job. AES stores its
+// state by column, so adjacent bytes across a row have indices four apart.
+function initRoundTrace() {
+  const input = $('traceInput');
+  const output = $('traceOutput');
+  const replay = $('traceReplay');
+  const tracks = [];
+  for (let row = 0; row < 4; row++) {
+    const line = document.createElement('div');
+    line.className = 'trace-line';
+    for (let col = 0; col < 4; col++) {
+      const byte = document.createElement('span');
+      byte.textContent = (col * 4 + row).toString(16).padStart(2, '0').toUpperCase();
+      if (col === 0) byte.className = 'index-byte';
+      line.append(byte);
+    }
+    input.append(line);
+    const window = document.createElement('div');
+    window.className = 'trace-window';
+    const strip = line.cloneNode(true);
+    // Duplicate one row so rotation has no jump at the viewport edge.
+    for (const cell of line.children) {
+      const copy = cell.cloneNode(true);
+      copy.setAttribute('aria-hidden', 'true');
+      strip.append(copy);
+    }
+    window.append(strip);
+    output.append(window);
+    tracks.push(strip);
+  }
+  // The clipped visual contains duplicate cells; expose only the final state.
+  output.setAttribute('role', 'img');
+  output.setAttribute('aria-label', 'Rows after rotation: 00 04 08 0C; 05 09 0D 01; 0A 0E 02 06; 0F 03 07 0B.');
+  let sequence;
+  function play() {
+    sequence?.pause();
+    // Each strip fills four visible cells. Percent offsets remain correct
+    // across breakpoints, even when the viewport changes mid-animation.
+    tracks.forEach((track, row) => { track.style.transform = `translateX(${-25 * row}%)`; });
+    const still = motionQuery?.matches || typeof anime !== 'function';
+    replay.hidden = Boolean(still);
+    if (still) return;
+    sequence = anime.timeline({ autoplay: false, easing: 'easeInOutCubic' });
+    tracks.slice(1).forEach((track, i) => {
+      track.style.transform = 'translateX(0%)';
+      sequence.add({ targets: track, translateX: ['0%', `${-25 * (i + 1)}%`], duration: 460 + i * 120 }, 260 + i * 140);
+    });
+    sequence.play();
+  }
+  replay.addEventListener('click', play);
+  motionQuery?.addEventListener('change', play);
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        observer.disconnect();
+        play();
+      }
+    });
+    observer.observe(output);
+  } else play();
+}
+
 /* Boot */
+
+initRoundTrace();
 
 checkHealth();
